@@ -4897,6 +4897,18 @@ globby@^6.1.0:
     pify "^2.0.0"
     pinkie-promise "^2.0.0"
 
+gojs-react@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/gojs-react/-/gojs-react-1.0.4.tgz#51b9d158b0a0ab5d05825b63dc079fbe67b5143c"
+  integrity sha512-K0wB3HhT3sN31pOxepFMNRhsiG6Hkb6w99THEvSoAjqFm0S5/x3aD+o/fsHAY5l8UlJHyq1Y+aJriGLWPAKCHA==
+  dependencies:
+    tslib "^1.10.0"
+
+gojs@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/gojs/-/gojs-2.1.2.tgz#ff6fe1b3c87900d7f684e524be755c8b67e4d947"
+  integrity sha512-cTRzRfanjfarB7jTDpa38m0AiVZRWNFgd/BEyKjeqfhghZV6VyQtkCulgwuTYkh55Q6hOwtO5zjdwNW2FFO00g==
+
 graceful-fs@^4.1.11, graceful-fs@^4.1.15, graceful-fs@^4.1.2, graceful-fs@^4.1.6:
   version "4.2.2"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.2.tgz#6f0952605d0140c1cfdb138ed005775b92d67b02"
@@ -10955,6 +10967,11 @@ yargs@^13.3.0:
     which-module "^2.0.0"
     y18n "^4.0.0"
     yargs-parser "^13.1.1"
+
+yarn@^1.19.2:
+  version "1.19.2"
+  resolved "https://registry.yarnpkg.com/yarn/-/yarn-1.19.2.tgz#cf5fc9b24ad97a11c65d7cb0b2ac945eb936122f"
+  integrity sha512-OdLN/K/sA+KnW4ggNQwHYK6YJdLkSWxbx6IYd+WIQJ6xDfk8CIYKckBfwGxTBmDaEluWs83InzjFCmUqPtpY+w==
 
 zen-observable-ts@^0.8.19:
   version "0.8.19"

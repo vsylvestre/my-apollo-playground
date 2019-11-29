@@ -3,25 +3,29 @@ const { ApolloServer, gql } = require('apollo-server');
 function startApollo(db) {
   const typeDefs = gql`
     type Query {
-      "A simple type for getting started!"
-      items: [Item]
-      item(id: String): Item
+      nodes: [Node]
     }
 
-    type Item {
+    type Mutation {
+      addNode(text: String!): Boolean
+    }
+
+    type Node {
       _id: String
-      content: String
-      isDone: Boolean
+      text: String
     }
   `;
 
   const resolvers = {
     Query: {
-      items: async () => {
-        return await db.collection("todos").find({}).toArray();
-      },
-      item: async (_, { id }) => {
-        return await db.collection("todos").findOne({ _id: id });
+      nodes: async () => {
+        return await db.collection("nodes").find({}).toArray();
+      }
+    },
+    Mutation: {
+      addNode: async (_, { text }) => {
+        const { result } = await db.collection("nodes").insert({ text });
+        return result.ok;
       }
     }
   };
