@@ -1,7 +1,7 @@
 {
-  "name": "my-apollo-playground",
+  "name": "react-gojs-apollo",
   "version": "1.0.0",
-  "description": "A simple app to test out GraphQL Apollo (along with Suspense).",
+  "description": "A simple app to test out GoJS 2.1 with GraphQL Apollo.",
   "main": "index.js",
   "author": "Vincent Sylvestre",
   "license": "MIT",

@@ -28,7 +28,7 @@ function Diagram(props) {
 
     const handleModelChange = (obj) => {
         if (obj.removedNodeKeys.length > 0) {
-            onModelChange(DiagramModelChange.NODE_DELETED, obj.removedNodeKeys[0]);
+            onModelChange(DiagramModelChange.NODE_DELETED, { id: obj.removedNodeKeys[0] });
         }
         if (obj.modifiedNodeData) {
             onModelChange(DiagramModelChange.NODE_UPDATED, obj.modifiedNodeData);

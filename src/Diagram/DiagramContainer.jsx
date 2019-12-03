@@ -60,7 +60,7 @@ function DiagramContainer() {
     const onModelChange = (event, data) => {
         switch (event) {
           case DiagramModelChange.NODE_DELETED:
-            deleteNode(data);
+            deleteNode({ variables: data });
             break;
           default:
             // Of course, we would see more events here eventually, such

@@ -29,7 +29,7 @@ function startApollo(db) {
   const resolvers = {
     Subscription: {
       nodeAdded: {
-        subscribe: (data) => pubsub.asyncIterator([NODE_ADDED])
+        subscribe: () => pubsub.asyncIterator([NODE_ADDED])
       }
     },
     Query: {
