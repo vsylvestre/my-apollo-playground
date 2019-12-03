@@ -1,13 +1,23 @@
-const { ApolloServer, gql } = require('apollo-server');
+const { ApolloServer, PubSub, gql } = require('apollo-server');
+const { ObjectId } = require('mongodb');
 
 function startApollo(db) {
+  const pubsub = new PubSub();
+
+  const NODE_ADDED = 'NODE_ADDED';
+
   const typeDefs = gql`
+    type Subscription {
+      nodeAdded: Node
+    }
+
     type Query {
       nodes: [Node]
     }
 
     type Mutation {
       addNode(text: String!): Boolean
+      deleteNode(id: String!): Boolean
     }
 
     type Node {
@@ -17,14 +27,27 @@ function startApollo(db) {
   `;
 
   const resolvers = {
-    Query: {
-      nodes: async () => {
-        return await db.collection("nodes").find({}).toArray();
+    Subscription: {
+      nodeAdded: {
+        subscribe: (data) => pubsub.asyncIterator([NODE_ADDED])
       }
     },
+    Query: {
+      nodes: async () => await db.collection("nodes").find({}).toArray()
+    },
     Mutation: {
-      addNode: async (_, { text }) => {
-        const { result } = await db.collection("nodes").insert({ text });
+      addNode: async (_, args) => {
+        const { result, ops } = await db.collection("nodes").insertOne({ text: args.text });
+
+        if (!result.ok) {
+          return false;
+        }
+
+        await pubsub.publish(NODE_ADDED, { nodeAdded: ops[0] })
+        return true;
+      },
+      deleteNode: async (_, args) => {
+        const { result } = await db.collection("nodes").deleteOne({ _id: ObjectId(args.id) });
         return result.ok;
       }
     }

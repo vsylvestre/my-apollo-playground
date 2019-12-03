@@ -8,15 +8,11 @@ const ADD_NODE = gql`
     }
 `;
 
-function AddNodeButton({ refetchNodes }) {
+function AddNodeButton({ numberOfNodes }) {
     const [addNode] = useMutation(ADD_NODE);
 
-    const [nodeCount, setNodeCount] = useState(1);
-
     const addOneNode = () => {
-        setNodeCount(nodeCount + 1);
-        addNode({ variables: { text: `Node${nodeCount}` } });
-        refetchNodes();
+        addNode({ variables: { text: `Node${numberOfNodes + 1}` } });
     };
 
     return (
