@@ -10,7 +10,7 @@
     "start": "concurrently \"react-scripts start\" \"node index.js\""
   },
   "devDependencies": {
-    "apollo-server": "^2.8.2",
+    "apollo-server": "^2.14.2",
     "concurrently": "^5.0.0",
     "graphql": "^14.4.2",
     "mongodb": "^3.3.4",
