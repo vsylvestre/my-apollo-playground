@@ -2,61 +2,79 @@ const { ApolloServer, PubSub, gql } = require('apollo-server');
 const { ObjectId } = require('mongodb');
 
 function startApollo(db) {
-  const pubsub = new PubSub();
+    const pubsub = new PubSub();
 
-  const NODE_ADDED = 'NODE_ADDED';
+    const DIAGRAM_UPDATED = 'DIAGRAM_UPDATED';
 
-  const typeDefs = gql`
-    type Subscription {
-      nodeAdded: Node
-    }
-
-    type Query {
-      nodes: [Node]
-    }
-
-    type Mutation {
-      addNode(text: String!): Boolean
-      deleteNode(id: String!): Boolean
-    }
-
-    type Node {
-      _id: String
-      text: String
-    }
-  `;
-
-  const resolvers = {
-    Subscription: {
-      nodeAdded: {
-        subscribe: () => pubsub.asyncIterator([NODE_ADDED])
-      }
-    },
-    Query: {
-      nodes: async () => await db.collection("nodes").find({}).toArray()
-    },
-    Mutation: {
-      addNode: async (_, args) => {
-        const { result, ops } = await db.collection("nodes").insertOne({ text: args.text });
-
-        if (!result.ok) {
-          return false;
+    const typeDefs = gql`
+        type Subscription {
+            diagramUpdated: DiagramUpdate
         }
 
-        await pubsub.publish(NODE_ADDED, { nodeAdded: ops[0] })
-        return true;
-      },
-      deleteNode: async (_, args) => {
-        const { result } = await db.collection("nodes").deleteOne({ _id: ObjectId(args.id) });
-        return result.ok;
-      }
-    }
-  };
+        type Query {
+            nodes: [Node]
+        }
 
-  return new ApolloServer({
-    typeDefs,
-    resolvers
-  });
+        type Mutation {
+            updateDiagram(json: String!): Boolean
+            addNode(text: String!, location: String!, stroke: String!): Boolean
+        }
+
+        type DiagramUpdate {
+            addedNodes: [Node]
+            updatedNodes: [Node]
+            deletedNodes: [String]
+        }
+
+        type Node {
+            _id: String
+            text: String
+            location: String
+            stroke: String
+        }
+    `;
+
+    const resolvers = {
+        Subscription: {
+            diagramUpdated: {
+                subscribe: () => pubsub.asyncIterator([DIAGRAM_UPDATED])
+            }
+        },
+        Query: {
+            nodes: async () => await db.collection("nodes").find({}).toArray()
+        },
+        Mutation: {
+            updateDiagram: async (_, args) => {
+                const { modifiedNodeData } = JSON.parse(args.json);
+                if (modifiedNodeData) {
+                    const strokeArray = ["red", "grey", "blue", "green", "yellow", "black", "purple"];
+                    const newNodes = modifiedNodeData.map(node => ({ ...node, stroke: strokeArray[Math.floor(Math.random() * strokeArray.length)] }));
+                    const updatePromises = newNodes.map(node => {
+                        const { _id, ...nodeWithoutId } = node;
+                        db.collection("nodes").replaceOne({ _id: ObjectId(_id) }, nodeWithoutId);
+                    });
+                    await Promise.all(updatePromises);
+                    await pubsub.publish(DIAGRAM_UPDATED, { diagramUpdated: { updatedNodes: newNodes }})
+                }
+                return true;
+            },
+            addNode: async (_, args) => {
+                const { result, ops } = await db.collection("nodes").insertOne({ text: args.text, location: args.location, stroke: args.stroke });
+                if (!result.ok) {
+                    return false;
+                }
+                await pubsub.publish(DIAGRAM_UPDATED, { diagramUpdated: { addedNodes: ops } });
+                return true;
+            }
+        }
+    };
+
+    return new ApolloServer({
+        typeDefs,
+        resolvers,
+        playground: true,
+        introspection: true
+    });
 }
 
 module.exports = { startApollo };

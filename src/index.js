@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { ApolloProvider } from "react-apollo";
+import { ApolloProvider } from "@apollo/client";
 import DiagramContainer from "./Diagram/DiagramContainer";
 import useApolloClient from "./useApolloClient";
 
