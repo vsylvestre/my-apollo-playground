@@ -1,11 +1,20 @@
 import * as React from "react";
 import * as go from "gojs";
 import { gql } from "@apollo/client/core";
-import { useQuery, useSubscription, useMutation, useApolloClient } from "@apollo/client";
+import { useQuery, useSubscription, useMutation } from "@apollo/client";
 import { ReactDiagram } from "gojs-react";
 import { AddNodeButton, RotateNodesButton } from "./Buttons";
+import useApolloUtils from "../_hooks/useApolloUtils";
 import Diagram from "./Diagram";
 import Context from "./Context";
+
+type Node = {
+    _id: string
+    text: string
+    location: string
+    stroke: string
+    angle: number
+};
 
 export const NodeFragment = gql`
     fragment Node on Node {
@@ -41,13 +50,14 @@ const DIAGRAM_UPDATED = gql`
             updatedNodes {
                 ...Node
             }
+            deletedNodes
         }
     }
     ${NodeFragment}
 `;
 
 function DiagramContainer() {
-    const client = useApolloClient();
+    const { addElementsToCache, updateElementsInCache, removeElementsFromCache } = useApolloUtils();
 
     const shouldSkipUpdate = React.useRef<boolean>(false);
 
@@ -74,8 +84,8 @@ function DiagramContainer() {
 
     React.useEffect(() => {
         if (subscriptionData) {
-            const { addedNodes, updatedNodes } = subscriptionData?.diagramUpdated;
-            if (addedNodes || updatedNodes) {
+            const { addedNodes, updatedNodes, deletedNodes } = subscriptionData?.diagramUpdated;
+            if (addedNodes || updatedNodes || deletedNodes) {
                 // If we're here, it's because `subscriptionData` was updated.
                 // If `subscriptionData` was updated, it's because the server sent
                 // back information following a model update (or an external
@@ -86,27 +96,16 @@ function DiagramContainer() {
                 shouldSkipUpdate.current = false;
             }
             if (addedNodes) {
-                client.writeQuery({
-                    query: GET_DIAGRAM,
-                    data: {
-                        nodes: [...data?.nodes, ...addedNodes]
-                    }
-                })
+                addElementsToCache<Node>(addedNodes, "Nodes");
             }
             if (updatedNodes) {
-                const updatedNodesIDs = updatedNodes.map((node: any) => node._id);
-                client.writeQuery({
-                    query: GET_DIAGRAM,
-                    data: {
-                        nodes: [
-                            ...data?.nodes.filter(({ _id }: any) => !updatedNodesIDs.includes(_id)),
-                            ...updatedNodes
-                        ]
-                    }
-                })
+                updateElementsInCache<Node>(updatedNodes, "Nodes");
+            }
+            if (deletedNodes) {
+                removeElementsFromCache(deletedNodes, "Nodes");
             }
         }
-    }, [subscriptionData]);
+    }, [subscriptionData, addElementsToCache, updateElementsInCache, removeElementsFromCache]);
 
     const onModelChange = React.useCallback((obj: go.IncrementalData) => {
         // If `shouldSkipUpdate` was set to false, that means we had
@@ -114,7 +113,6 @@ function DiagramContainer() {
         // apply to GoJS. That also means the server is _already_ aware
         // of that change, and we don't need to call `updateDiagram`
         // again. Otherwise we'll enter an infinite loop.
-        console.log("shouldSkipUpdate: ", shouldSkipUpdate.current);
         if (!shouldSkipUpdate.current) {
             return;
         }
