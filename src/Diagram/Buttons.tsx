@@ -1,6 +1,7 @@
 import * as React from "react";
 import { gql } from "@apollo/client/core";
 import { useMutation, useQuery } from "@apollo/client/react";
+import Context from "./Context";
 
 const GET_NODES = gql`
     query {
@@ -34,4 +35,25 @@ function AddNodeButton() {
     )
 }
 
-export default AddNodeButton;
+function RotateNodesButton() {
+    const { diagram } = React.useContext(Context);
+
+    if (!diagram) {
+        return null;
+    }
+
+    const rotateAllNodes = () => {
+        const transaction = "RotateAllNodes";
+        diagram.startTransaction(transaction);
+        diagram.nodes.each(node => node.angle += 90);
+        diagram.commitTransaction(transaction)
+    };
+
+    return (
+        <button type="button" onClick={rotateAllNodes}>
+            Rotate all nodes
+        </button>
+    );
+}
+
+export { AddNodeButton, RotateNodesButton };

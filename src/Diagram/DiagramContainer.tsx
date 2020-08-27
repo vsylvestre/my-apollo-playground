@@ -3,9 +3,9 @@ import * as go from "gojs";
 import { gql } from "@apollo/client/core";
 import { useQuery, useSubscription, useMutation, useApolloClient } from "@apollo/client";
 import { ReactDiagram } from "gojs-react";
+import { AddNodeButton, RotateNodesButton } from "./Buttons";
 import Diagram from "./Diagram";
-
-import "./Diagram.css";
+import Context from "./Context";
 
 export const NodeFragment = gql`
     fragment Node on Node {
@@ -13,6 +13,7 @@ export const NodeFragment = gql`
         text
         location
         stroke
+        angle
     }
 `;
 
@@ -51,7 +52,7 @@ function DiagramContainer() {
     const shouldSkipUpdate = React.useRef<boolean>(false);
 
     // This will be called when the component mounts, in order to get
-    // the initial list of nodes from the DB (and, in turn, store it
+    // the initial list of nodes from the server (and, in turn, store it
     // in the cache automatically). It will also be refreshed when
     // there are updates to our cache.
     const { data, loading, error } = useQuery(GET_DIAGRAM);
@@ -67,15 +68,21 @@ function DiagramContainer() {
     // triggered by our GraphQL server every time there's a mutation
     // that is called that modifies something on the diagram. Namely,
     // this will be called every time there's a model update sent to
-    // the DB, because the objects the DB return might be different
-    // from the ones we sent.
+    // the server, because the objects the server return might be 
+    // different from the ones we sent.
     const { data: subscriptionData } = useSubscription(DIAGRAM_UPDATED);
 
     React.useEffect(() => {
-        const diagram = diagramRef.current?.getDiagram();
-        if (diagram) {
+        if (subscriptionData) {
             const { addedNodes, updatedNodes } = subscriptionData?.diagramUpdated;
             if (addedNodes || updatedNodes) {
+                // If we're here, it's because `subscriptionData` was updated.
+                // If `subscriptionData` was updated, it's because the server sent
+                // back information following a model update (or an external
+                // update). Therefore, it's possible that the GoJS state be
+                // different from what's stored in our DB right now, and we want
+                // to make sure that those changes that were possibly applied by
+                // the server are also present on our diagram.
                 shouldSkipUpdate.current = false;
             }
             if (addedNodes) {
@@ -102,12 +109,24 @@ function DiagramContainer() {
     }, [subscriptionData]);
 
     const onModelChange = React.useCallback((obj: go.IncrementalData) => {
+        // If `shouldSkipUpdate` was set to false, that means we had
+        // an update coming in from the server that we wanted to manually
+        // apply to GoJS. That also means the server is _already_ aware
+        // of that change, and we don't need to call `updateDiagram`
+        // again. Otherwise we'll enter an infinite loop.
+        console.log("shouldSkipUpdate: ", shouldSkipUpdate.current);
         if (!shouldSkipUpdate.current) {
-            shouldSkipUpdate.current = true;
             return;
         }
         updateDiagram({ variables: { json: JSON.stringify(obj) } });
     }, [updateDiagram]);
+
+    // We call this when we need to set back `shouldSkipUpdate`
+    // to true. We actually call this from `Diagram.tsx` once 
+    // GoJS has applied an update that we got from the server
+    const avoidNextUpdates = React.useCallback(() => {
+        shouldSkipUpdate.current = true;
+    }, []);
 
     if (loading) {
         return "Loading...";
@@ -118,12 +137,17 @@ function DiagramContainer() {
     }
 
     return (
-        <Diagram
-            ref={diagramRef}
-            nodes={data?.nodes || []}
-            onModelChange={onModelChange}
-            shouldSkipUpdate={shouldSkipUpdate.current}
-        />
+        <Context.Provider value={{ diagram: diagramRef.current?.getDiagram() || null } }>
+            <Diagram
+                ref={diagramRef}
+                nodes={data?.nodes || []}
+                onModelChange={onModelChange}
+                shouldSkipUpdate={shouldSkipUpdate.current}
+                avoidNextUpdates={avoidNextUpdates}
+            />
+            <AddNodeButton />
+            <RotateNodesButton />
+        </Context.Provider>
     );
 }
 

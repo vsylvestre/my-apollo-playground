@@ -31,6 +31,7 @@ function startApollo(db) {
             text: String
             location: String
             stroke: String
+            angle: Int
         }
     `;
 
@@ -59,7 +60,8 @@ function startApollo(db) {
                 return true;
             },
             addNode: async (_, args) => {
-                const { result, ops } = await db.collection("nodes").insertOne({ text: args.text, location: args.location, stroke: args.stroke });
+                const newNode = { text: args.text, location: args.location, stroke: args.stroke, angle: 0 };
+                const { result, ops } = await db.collection("nodes").insertOne(newNode);
                 if (!result.ok) {
                     return false;
                 }
