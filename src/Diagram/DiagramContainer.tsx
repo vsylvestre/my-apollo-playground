@@ -121,7 +121,7 @@ function DiagramContainer() {
 
     // We call this when we need to set back `shouldSkipUpdate`
     // to true. We actually call this from `Diagram.tsx` once 
-    // GoJS has applied an update that we got from the server
+    // GoJS has applied an update that we got from the server.
     const avoidNextUpdates = React.useCallback(() => {
         shouldSkipUpdate.current = true;
     }, []);
