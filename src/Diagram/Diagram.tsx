@@ -7,6 +7,7 @@ import "./Diagram.css";
 
 const initDiagram = () => {
     const $ = go.GraphObject.make;
+
     const diagram = $(go.Diagram, 
         { 
             "undoManager.isEnabled": true,
@@ -16,6 +17,7 @@ const initDiagram = () => {
                 makeUniqueKeyFunction: () => String(new ObjectID())
             })
         });
+
     diagram.nodeTemplate = (
         $(go.Node, go.Node.Auto,
             $(go.TextBlock,
@@ -29,6 +31,16 @@ const initDiagram = () => {
             new go.Binding("angle").makeTwoWay()
         )
     );
+
+    const { commandHandler } = diagram;
+    commandHandler.pasteSelection = function() {
+        const transaction = "CustomPaste";
+        diagram.startTransaction(transaction);
+        const position = diagram.lastInput.documentPoint;
+        go.CommandHandler.prototype.pasteSelection.call(commandHandler, position);
+        diagram.commitTransaction(transaction);
+    }
+
     return diagram;
 };
 
