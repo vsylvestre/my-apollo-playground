@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as go from "gojs";
 import { ReactDiagram } from "gojs-react";
+import { ObjectID } from "mongodb";
 
 import "./Diagram.css";
 
@@ -10,7 +11,9 @@ const initDiagram = () => {
         { 
             "undoManager.isEnabled": true,
             model: $(go.GraphLinksModel, {
-                linkKeyProperty: "key"
+                nodeKeyProperty: "_id",
+                linkKeyProperty: "_id",
+                makeUniqueKeyFunction: () => String(new ObjectID())
             })
         });
     diagram.nodeTemplate = (
@@ -34,18 +37,13 @@ const Diagram = React.forwardRef<ReactDiagram, any>((props: any, ref) => {
         nodes, onModelChange, shouldSkipUpdate, avoidNextUpdates 
     } = props;
 
-    const makeNode = React.useCallback((node: any) => ({
-        ...node, 
-        key: node._id
-    }), []);
-
     React.useEffect(() => {
-        // The only time when we actually want to manually apply an
-        // update to the diagram is when we get back new data from
-        // our server. Otherwise we can assume that GoJS has already
-        // taken care of updating its state. Therefore, as soon as
-        // we have applied the server update (that is, when shouldSkipUpdate 
-        // is `false`), we turn it back to true by calling `avoidNextUpdates`
+        // The only time when we actually want to manually apply an update 
+        // to the diagram is when we get back new data from our server. 
+        // Otherwise we can assume that GoJS has already taken care of 
+        // updating its own state. Therefore, as soon as we have applied 
+        // the server update (that is, when `shouldSkipUpdate` is false),
+        // we turn it back to true by calling `avoidNextUpdates`.
         if (!shouldSkipUpdate) {
             avoidNextUpdates();
         }
@@ -56,7 +54,7 @@ const Diagram = React.forwardRef<ReactDiagram, any>((props: any, ref) => {
             ref={ref}
             initDiagram={initDiagram}
             divClassName="diagram"
-            nodeDataArray={nodes.map(makeNode)}
+            nodeDataArray={nodes}
             onModelChange={onModelChange}
             skipsDiagramUpdate={shouldSkipUpdate}
         />

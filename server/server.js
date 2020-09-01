@@ -46,17 +46,30 @@ function startApollo(db) {
         },
         Mutation: {
             updateDiagram: async (_, args) => {
-                const { modifiedNodeData, removedNodeKeys } = JSON.parse(args.json);
-                let updatedNodes = null, deletedNodes = null;
-                if (modifiedNodeData) {
-                    const strokeArray = ["red", "grey", "blue", "green", "yellow", "black", "purple"];
-                    const newNodes = modifiedNodeData.map(node => ({ ...node, stroke: strokeArray[Math.floor(Math.random() * strokeArray.length)] }));
-                    const updatePromises = newNodes.map(node => {
-                        const { _id, ...nodeWithoutId } = node;
-                        db.collection("nodes").replaceOne({ _id: ObjectId(_id) }, nodeWithoutId);
+                const { modifiedNodeData, removedNodeKeys, insertedNodeKeys } = JSON.parse(args.json);
+                let updatedNodes = null, deletedNodes = null, addedNodes = null;
+                if (insertedNodeKeys) {
+                    const insertPromises = insertedNodeKeys.map(async (key) => {
+                        const addedNode = modifiedNodeData.find(({ _id }) => _id === key);
+                        const { ops: [node] } = await db.collection("nodes").insertOne({ ...addedNode, _id: ObjectId(addedNode._id) });
+                        return node;
                     });
-                    await Promise.all(updatePromises);
-                    updatedNodes = newNodes;
+                    addedNodes = await Promise.all(insertPromises);
+                }
+                if (modifiedNodeData) {
+                    const updatedNodeData = insertedNodeKeys
+                        ? modifiedNodeData.filter(({ _id }) => !insertedNodeKeys.includes(_id))
+                        : modifiedNodeData;
+                    if (updatedNodeData.length > 0) {
+                        const strokeArray = ["red", "grey", "blue", "green", "yellow", "black", "purple"];
+                        const newNodes = updatedNodeData.map(node => ({ ...node, stroke: strokeArray[Math.floor(Math.random() * strokeArray.length)] }));
+                        const updatePromises = newNodes.map(node => {
+                            const { _id, ...nodeWithoutId } = node;
+                            db.collection("nodes").replaceOne({ _id: ObjectId(_id) }, nodeWithoutId);
+                        });
+                        await Promise.all(updatePromises);
+                        updatedNodes = newNodes;
+                    }
                 }
                 if (removedNodeKeys) {
                     const removePromises = removedNodeKeys.map(key => {
@@ -65,7 +78,7 @@ function startApollo(db) {
                     await Promise.all(removePromises);
                     deletedNodes = removedNodeKeys;
                 }
-                await pubsub.publish(DIAGRAM_UPDATED, { diagramUpdated: { updatedNodes, deletedNodes }});
+                await pubsub.publish(DIAGRAM_UPDATED, { diagramUpdated: { updatedNodes, deletedNodes, addedNodes }});
                 return true;
             },
             addNode: async (_, args) => {

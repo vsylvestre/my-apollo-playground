@@ -59,6 +59,7 @@ const DIAGRAM_UPDATED = gql`
 function DiagramContainer() {
     const { addElementsToCache, updateElementsInCache, removeElementsFromCache } = useApolloUtils();
 
+    const isDiagramLoad = React.useRef<boolean>(true);
     const shouldSkipUpdate = React.useRef<boolean>(false);
 
     // This will be called when the component mounts, in order to get
@@ -74,11 +75,11 @@ function DiagramContainer() {
 
     const diagramRef = React.useRef<ReactDiagram | null>(null);
 
-    // Here, we subscribe to events of diagram updates. This will be 
+    // Here, we subscribe to events of diagram updates. This will be
     // triggered by our GraphQL server every time there's a mutation
     // that is called that modifies something on the diagram. Namely,
     // this will be called every time there's a model update sent to
-    // the server, because the objects the server return might be 
+    // the server, because the objects the server return might be
     // different from the ones we sent.
     const { data: subscriptionData } = useSubscription(DIAGRAM_UPDATED);
 
@@ -86,13 +87,15 @@ function DiagramContainer() {
         if (subscriptionData) {
             const { addedNodes, updatedNodes, deletedNodes } = subscriptionData?.diagramUpdated;
             if (addedNodes || updatedNodes || deletedNodes) {
-                // If we're here, it's because `subscriptionData` was updated.
-                // If `subscriptionData` was updated, it's because the server sent
-                // back information following a model update (or an external
-                // update). Therefore, it's possible that the GoJS state be
-                // different from what's stored in our DB right now, and we want
-                // to make sure that those changes that were possibly applied by
-                // the server are also present on our diagram.
+                // If we're here, it's because `subscriptionData` was updated. If
+                // `subscriptionData` was updated, it's because the server sent
+                // back information following a model update (or an external  update).
+                // Therefore, it's possible that the GoJS state is different from
+                // what's stored in our DB right now, and we want to make sure that
+                // those changes that were possibly applied by the server are also
+                // present on our diagram. By setting `shouldSkipUpdate` to false,
+                // this will let the GoJS diagram know that it should refresh its
+                // own state with the incoming batch of nodes and links.
                 shouldSkipUpdate.current = false;
             }
             if (addedNodes) {
@@ -108,6 +111,14 @@ function DiagramContainer() {
     }, [subscriptionData, addElementsToCache, updateElementsInCache, removeElementsFromCache]);
 
     const onModelChange = React.useCallback((obj: go.IncrementalData) => {
+        // We need to know if this is the first load of the diagram. On
+        // the first load, we will still enter this method because the
+        // diagram will consider it as a "change". But we don't want to
+        // send that information to the DB - it's already there.
+        if (isDiagramLoad.current) {
+            isDiagramLoad.current = false;
+            return;
+        }
         // If `shouldSkipUpdate` was set to false, that means we had
         // an update coming in from the server that we wanted to manually
         // apply to GoJS. That also means the server is _already_ aware
@@ -117,11 +128,12 @@ function DiagramContainer() {
             return;
         }
         updateDiagram({ variables: { json: JSON.stringify(obj) } });
-    }, [updateDiagram]);
+    }, [updateDiagram]); // eslint-disable-line
 
     // We call this when we need to set back `shouldSkipUpdate`
     // to true. We actually call this from `Diagram.tsx` once 
     // GoJS has applied an update that we got from the server.
+    // See that component for more details.
     const avoidNextUpdates = React.useCallback(() => {
         shouldSkipUpdate.current = true;
     }, []);
